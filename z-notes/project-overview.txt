@@ -1,0 +1,169 @@
+### Overview of an E-commerce Application Flow
+
+An e-commerce application involves several components that work together to enable users to browse, purchase, and manage products. Below is a high-level explanation of the core components, their relationships, and the overall flow.
+
+---
+
+### 1. **Core Components**
+
+#### **Users**
+- **Purpose**: Manage user accounts and authentication.
+- **Data**:
+  - User ID, name, email, password (hashed), address, phone number.
+- **APIs**:
+  - Create Account (Sign Up)
+  - Login (JWT-based authentication)
+  - Update Profile
+  - Get User Details
+
+#### **Products**
+- **Purpose**: Manage product listings.
+- **Data**:
+  - Product ID, name, description, price, category, stock, images.
+- **APIs**:
+  - Create Product
+  - Get Product List
+  - Get Product by ID
+  - Update Product
+  - Delete Product
+  - Search/Filter Products
+
+#### **Cart**
+- **Purpose**: Temporarily store products the user intends to purchase.
+- **Data**:
+  - Cart ID, User ID, list of product IDs with quantities.
+- **APIs**:
+  - Add Product to Cart
+  - Remove Product from Cart
+  - Update Product Quantity in Cart
+  - View Cart
+  - Clear Cart
+
+#### **Orders**
+- **Purpose**: Track purchases made by users.
+- **Data**:
+  - Order ID, User ID, list of products with quantities, total price, order status (pending, completed, canceled), payment details.
+- **APIs**:
+  - Create Order (triggered from cart)
+  - Get Order Details
+  - Update Order Status
+  - Cancel Order
+
+#### **Payments**
+- **Purpose**: Process payments for orders.
+- **Data**:
+  - Payment ID, Order ID, payment status (pending, completed, failed).
+- **APIs**:
+  - Initiate Payment
+  - Confirm Payment
+  - Get Payment Status
+
+#### **Inventory**
+- **Purpose**: Manage stock for products.
+- **Data**:
+  - Product ID, available quantity.
+- **APIs**:
+  - Update Stock (reduce stock on order, increase on cancellation).
+
+#### **Authentication**
+- **Purpose**: Secure access to APIs using JWT.
+- **Features**:
+  - Sign Up
+  - Login (returns JWT token)
+  - Middleware to validate JWT for protected APIs.
+
+#### **Messaging with Kafka**
+- **Purpose**: Enable asynchronous processing for tasks like order updates, notifications, and analytics.
+- **Use Cases**:
+  - Notify users of order status (e.g., via email or SMS).
+  - Synchronize inventory updates across microservices.
+  - Log and process user activity for analytics.
+
+---
+
+### 2. **Flow and Relationships**
+
+#### **User Registration and Authentication**
+1. User signs up and provides details (username, email, password).
+2. Password is hashed and stored securely in the database.
+3. User logs in and receives a JWT token for secure access to APIs.
+4. JWT middleware validates tokens for protected endpoints.
+
+#### **Product Browsing**
+1. Users fetch the product list (e.g., paginated with filters).
+2. User selects a product to view details.
+3. User adds the product to the cart.
+
+#### **Cart Management**
+1. User adds items to the cart with specific quantities.
+2. Cart APIs allow users to update quantities, remove items, or view the cart.
+3. User proceeds to checkout from the cart.
+
+#### **Order Placement**
+1. User initiates order placement from the cart.
+2. Backend validates stock for each product.
+3. Order is created, and stock is updated in the inventory.
+4. Kafka produces a message for order confirmation, and consumers handle notifications and updates.
+
+#### **Payment**
+1. User selects a payment method and completes the transaction.
+2. Backend updates the order status to `completed` upon successful payment or `failed` if the transaction fails.
+3. Kafka messages trigger inventory updates and notifications.
+
+#### **Inventory Updates**
+1. On order creation, stock is reduced.
+2. On order cancellation, stock is restored.
+3. Kafka ensures synchronization between inventory and order services.
+
+#### **Notifications**
+1. Kafka consumers send notifications (e.g., order confirmations, status updates).
+2. Notifications can be via email, SMS, or in-app alerts.
+
+#### **Admin Features**
+1. Admins can create, update, or delete products.
+2. Admins can monitor and update order statuses.
+
+---
+
+### 3. **Component Interactions**
+
+#### **Relationships**
+1. **Users ↔ Orders**:
+   - A user can place multiple orders; each order belongs to one user.
+2. **Orders ↔ Products**:
+   - An order contains one or more products with specific quantities.
+3. **Cart ↔ Products**:
+   - The cart temporarily holds products until the order is placed.
+4. **Orders ↔ Payments**:
+   - Every order is linked to a payment status.
+5. **Inventory ↔ Products**:
+   - Inventory tracks available stock for each product.
+6. **Kafka ↔ All**:
+   - Kafka ensures asynchronous communication and decoupling between services.
+
+---
+
+### 4. **Features Covered**
+
+- **CRUD Operations**: Users, Products, Orders, Cart.
+- **Authentication**: JWT for secure API access.
+- **Concurrency**: Kafka for handling asynchronous tasks.
+- **Data Integrity**: Validations to ensure stock consistency.
+- **Scalability**: Kafka-based messaging ensures the system can handle high loads.
+
+---
+
+By implementing an **E-commerce Inventory and Order System**, you will cover:
+- CRUD operations.
+- Authentication and middleware.
+- Kafka producers and consumers for asynchronous workflows.
+- Database integration and queries.
+- Business logic for stock, orders, and payments.
+
+This project is highly relevant for interviews as it showcases your understanding of backend architecture, concurrency, messaging systems, and scalable design.
+
+
+
+Ecommerce Application
+
+This project is a robust ecommerce backend system built in Golang. It features a Kafka-based event-driven architecture for asynchronous communication between microservices, ensuring high throughput and low latency. The application exposes RESTful APIs using Gorilla Mux with secure JWT-based authentication and supports complete CRUD operations for managing users, products, and orders. It leverages MySQL for data storage with advanced features such as DB transactions and row-level locking to prevent race conditions during order processing. Additionally, the system integrates a mock payment gateway with webhook handling, uses Goroutines and Channels for efficient concurrency, and implements requeue/dequeue mechanisms to ensure fault-tolerant event processing. Real-time notifications are sent via SMTP, Webhooks, and Slack, making it a comprehensive, scalable solution for modern ecommerce requirements.

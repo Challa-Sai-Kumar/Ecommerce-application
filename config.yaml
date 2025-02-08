@@ -1,0 +1,31 @@
+kafka:
+  broker_list:
+    - "localhost:9092"
+  topics:
+    order_status: "order-status"
+    payment_status: "payment-status"
+    inventory_updates: "inventory-updates"
+    user_notifications: "user-notifications"
+  consumer_groups:
+    order_status_group: "order-status-group"
+    user_notifications_group: "user-notifications-group"
+    payment_group: "payment-group"
+
+email:
+  smtp_host: "smtp.gmail.com"    # SMTP server host
+  smtp_port: 587                 # SMTP server port
+  username: "fortvmail3@gmail.com" # SMTP username
+  password: "tkab fkxn dymw mpsl" # SMTP password (use secrets management in production)
+  from_address: "fortvmail3@gmail.com" # Email sender address
+
+database:
+  data_source_name: "root:123123@tcp(localhost:3306)/ecommerce"
+  driver_name: "mysql"
+  max_open_connections: 10
+  max_idle_connections: 5
+
+server:
+  port: 8080                     # Server port for the application
+
+logging:
+  level: "INFO"                  # Logging level (DEBUG, INFO, WARN, ERROR)

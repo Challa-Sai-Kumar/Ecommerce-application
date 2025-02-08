@@ -1,0 +1,152 @@
+### **Frontend Perspective: When and How the Flow Starts**
+
+In the frontend, the **order placement flow** and **stock deduction flow** are tightly linked to user actions and backend API interactions.
+
+---
+
+### **1. When Does the Flow Start?**
+
+#### **User Action: "Place Order"**
+- When a user confirms their cart and clicks the "Place Order" button, the frontend initiates the order placement flow.
+- The frontend sends a request to the backend (e.g., `POST /orders`) with the necessary details:
+  - User ID (often included via JWT or session data).
+  - Payment method or token (if integrated with payment).
+  - Any optional fields (e.g., delivery instructions).
+
+#### **Backend Flow Triggered: Reserve Stock and Place Order**
+- Upon receiving the "Place Order" request, the backend:
+  1. Validates the cart items.
+  2. Reserves stock for the requested products.
+  3. Calculates the total price.
+  4. Creates the order and its associated items.
+  5. Sends an acknowledgment to the frontend (e.g., order ID).
+
+---
+
+### **2. What Happens After Placing the Order?**
+
+#### **Frontend:**
+- After placing the order, the frontend usually redirects the user to:
+  - A "Payment Page" if payment hasn’t been completed yet.
+  - An "Order Confirmation Page" if payment was integrated during placement.
+
+#### **Backend: Deduct Reserved Stock**
+This step begins **after payment is successful** to ensure that stock is only deducted for confirmed orders.
+
+1. **Frontend Action: Payment Confirmation**
+   - The user completes payment via a payment gateway (e.g., Stripe, Razorpay).
+   - The payment gateway notifies the backend of the payment success.
+   - Alternatively, the frontend may call a `POST /payments` API to notify the backend.
+
+2. **Backend Action:**
+   - When the backend receives the payment confirmation:
+     1. It updates the `order` status to `completed`.
+     2. Deducts the reserved stock by reducing `available_stock` and `reserved_stock` in the `products` table:
+        ```sql
+        UPDATE products
+        SET available_stock = available_stock - ?, reserved_stock = reserved_stock - ?
+        WHERE id = ?;
+        ```
+
+3. **If Payment Fails or Order is Canceled:**
+   - The backend releases the reserved stock by reducing the `reserved_stock` field without affecting `available_stock`:
+     ```sql
+     UPDATE products
+     SET reserved_stock = reserved_stock - ?
+     WHERE id = ?;
+     ```
+
+---
+
+### **Flow Overview**
+
+1. **Frontend Triggers "Place Order":**
+   - API: `POST /orders`.
+   - The backend reserves stock and creates the order.
+
+2. **Frontend Manages Payment:**
+   - API: `POST /payments`.
+   - The backend confirms payment and updates the order.
+
+3. **Backend Deducts Reserved Stock:**
+   - After payment success, the reserved stock is deducted from `available_stock`.
+
+4. **Frontend Receives Confirmation:**
+   - On successful payment and stock deduction, the frontend shows an "Order Completed" page.
+
+---
+
+### **Key Handling in the Backend**
+
+1. **Atomic Operations:**
+   - Reserve stock during order placement (part of a transaction).
+   - Deduct stock only after payment confirmation.
+
+2. **Error Handling:**
+   - If payment fails or order is canceled, release the reserved stock.
+   - Use a retry mechanism to handle transient errors (e.g., network issues with payment gateways).
+
+3. **Asynchronous Handling:**
+   - Use asynchronous processes for handling payment gateways and stock updates, ensuring smooth user experience without delays.
+
+---
+
+### **Frontend Example:**
+
+1. **Place Order Request:**
+   ```javascript
+   fetch('/orders', {
+     method: 'POST',
+     headers: {
+       'Content-Type': 'application/json',
+       Authorization: `Bearer ${token}`,
+     },
+     body: JSON.stringify({
+       paymentMethod: 'credit_card',
+       userID: '12345',
+     }),
+   })
+   .then((response) => response.json())
+   .then((order) => {
+     // Redirect to payment page
+     window.location.href = `/payment/${order.id}`;
+   });
+   ```
+
+2. **Payment Confirmation Request:**
+   ```javascript
+   fetch('/payments', {
+     method: 'POST',
+     headers: {
+       'Content-Type': 'application/json',
+       Authorization: `Bearer ${token}`,
+     },
+     body: JSON.stringify({
+       orderID: '98765',
+       transactionID: 'abc123',
+       paymentStatus: 'success',
+     }),
+   })
+   .then(() => {
+     // Show order success page
+     window.location.href = `/order-success`;
+   });
+   ```
+
+---
+
+### **Benefits of This Approach**
+
+- **Consistency:** Ensures stock is never deducted before payment is confirmed.
+- **Concurrency Handling:** Prevents race conditions by locking stock during order placement.
+- **Scalability:** Decouples payment processing and stock management through asynchronous handling.
+
+
+
+resume notes
+
+I have implemented crud operations and once user login a jwt is generated which is used for authentication purpose while accessing few apis and its valid for an hour
+I have used db transactions and locking the products row to avoid race condition by reserving product in the process placing order. after that i mocked a payment gateway to do payments and payment gateway will send response via webhook call to backend then  the based on the webhook response if it is failed or successful we will update the products table
+now based on fail or succes I have used kafka to publish that event and it will be consumed by consumer which are running in go routines concurrently and then I will notify the user via an email using smtp services
+I have also used email services to send email whenever a new user is created
+and we will hash the new user password to store in db and also used this hased password while user login 

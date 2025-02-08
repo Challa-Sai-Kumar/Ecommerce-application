@@ -1,0 +1,98 @@
+### **Webhook Flow Between Payment Gateway and Server**
+
+A **webhook** allows a payment gateway (or any external service) to notify your server about events, such as a payment's status change. Below is a simplified explanation of the flow:
+
+---
+
+### **Actors in the Flow**
+
+1. **Payment Gateway (Webhook Provider):**
+   The external service (e.g., Stripe, Razorpay, PayPal) sends webhook notifications to your server when a payment event occurs (like `payment_success`, `payment_failed`, etc.).
+
+2. **Your Server (Webhook Consumer):**
+   The server listens for incoming webhook notifications from the payment gateway, verifies the authenticity of the request, and processes the event accordingly.
+
+---
+
+### **Flow Overview**
+
+#### **1. Payment Initiation (Client -> Gateway)**
+   - **Frontend:** The user initiates a payment from the frontend (e.g., by clicking "Pay Now").
+   - **Backend:** Your server creates a payment request with the gateway (via its API). This request includes details like the amount, order ID, and callback URLs (e.g., success, failure, or webhook URL).
+   - **Payment Gateway:** Provides a hosted payment page or token to redirect the user to complete the payment.
+
+#### **2. Payment Completion (Client -> Gateway)**
+   - The user completes the payment (e.g., by entering card details or using a wallet).
+   - The gateway processes the payment and determines its success or failure.
+
+#### **3. Webhook Notification (Gateway -> Server)**
+   - After processing, the gateway sends a **webhook** notification to your server with the payment details and status.
+   - The server verifies the webhook (e.g., using HMAC signatures) to ensure the request is legitimate.
+   - If valid, the server updates the payment status in the database (e.g., marking the order as "Paid" or "Failed").
+
+#### **4. Payment Status Update (Server -> Client)**
+   - After processing the webhook, the server may notify the frontend about the updated payment status via WebSocket, polling, or email.
+
+---
+
+### **Sequence of Events**
+
+1. **Frontend Initiates Payment:**
+   - User clicks "Pay Now."
+   - Your server sends a request to the payment gateway to create a payment.
+
+2. **Redirect to Payment Gateway:**
+   - User is redirected to the payment gateway's hosted payment page.
+   - User completes the payment (success or failure).
+
+3. **Payment Gateway Sends Webhook:**
+   - Gateway sends a POST request to your server's webhook endpoint with the payment details (e.g., order ID, amount, status).
+   - Your server verifies and processes this webhook.
+
+4. **Server Updates the Order:**
+   - If the webhook is valid:
+     - Mark the order as `Paid` or `Failed`.
+     - Deduct or restore stock.
+     - Send confirmation to the user.
+
+---
+
+### **Example Flow**
+
+1. **Payment Initiation (Client -> Server):**
+   - **Client:** `POST /api/orders/123/pay`
+   - **Server:** Calls payment gateway API with:
+     - Amount: $50
+     - Order ID: `123`
+     - Webhook URL: `https://example.com/api/webhooks/payment`
+
+2. **User Completes Payment (Client -> Gateway):**
+   - Gateway redirects the user to a payment page to complete the payment.
+
+3. **Webhook Notification (Gateway -> Server):**
+   - **Gateway:** Sends `POST` request to `https://example.com/api/webhooks/payment` with:
+     ```json
+     {
+       "order_id": "123",
+       "status": "success",
+       "transaction_id": "txn_789"
+     }
+     ```
+
+4. **Server Processes Webhook:**
+   - Verifies the signature.
+   - Marks the order as `Paid`.
+   - Updates stock levels.
+
+5. **Server Notifies Frontend:**
+   - User sees updated order status in their dashboard.
+
+---
+
+### **Key Takeaways**
+
+- **Webhook Provider:** The payment gateway (e.g., Stripe, Razorpay, PayPal) that sends webhook notifications to your server.
+- **Webhook Consumer:** Your server processes the webhook and updates the payment or order status.
+- **Webhook URL:** An endpoint on your server where the gateway sends POST requests.
+
+Let me know if you'd like further clarification on any part!
